@@ -7,6 +7,7 @@ interface Profile {
   name: string;
   phone: string;
   points: number;
+  role?: string; // ✅ أضفنا role كحقل اختياري
 }
 
 interface AuthContextType {
@@ -47,14 +48,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ✅ دالة checkAdmin المعدلة - بتجرب أكثر من مصدر
   const checkAdmin = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
-    setIsAdmin(!!data);
+    try {
+      // 1. نجرب نجيب الـ role من جدول profiles
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileData?.role === 'admin') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // 2. لو مفيش في profiles، نجرب من user metadata
+      const { data: { user } } = await supabase.auth.getUser();
+      const role = user?.user_metadata?.role || user?.raw_user_meta_data?.role;
+      
+      if (role === 'admin') {
+        setIsAdmin(true);
+        return;
+      }
+
+      // 3. لو لسه مفيش، نستخدم RPC كـ fallback (لو موجود)
+      const { data: rpcData } = await supabase
+        .rpc('has_role', { _user_id: userId, _role: 'admin' });
+      
+      setIsAdmin(!!rpcData);
+    } catch (error) {
+      console.error('Error checking admin role:', error);
+      setIsAdmin(false);
+    }
   };
 
+  // ✅ دالة checkModerator المعدلة بنفس الطريقة
   const checkModerator = async (userId: string) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "moderator" });
-    setIsModerator(!!data);
+    try {
+      // 1. نجرب نجيب الـ role من جدول profiles
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profileData?.role === 'moderator') {
+        setIsModerator(true);
+        return;
+      }
+
+      // 2. لو مفيش في profiles، نجرب من user metadata
+      const { data: { user } } = await supabase.auth.getUser();
+      const role = user?.user_metadata?.role || user?.raw_user_meta_data?.role;
+      
+      if (role === 'moderator') {
+        setIsModerator(true);
+        return;
+      }
+
+      // 3. لو لسه مفيش، نستخدم RPC كـ fallback
+      const { data: rpcData } = await supabase
+        .rpc('has_role', { _user_id: userId, _role: 'moderator' });
+      
+      setIsModerator(!!rpcData);
+    } catch (error) {
+      console.error('Error checking moderator role:', error);
+      setIsModerator(false);
+    }
   };
 
   const refreshProfile = async () => {
