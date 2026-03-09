@@ -14,16 +14,317 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      booking_orders: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          item_name: string
+          item_price: number
+          quantity: number
+          status: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          item_name: string
+          item_price: number
+          quantity?: number
+          status?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_price?: number
+          quantity?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_orders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          area_cost: number
+          booking_type: string
+          created_at: string
+          deposit_amount: number
+          deposit_paid: boolean
+          details: string
+          id: string
+          orders_cost: number
+          payment_method: string
+          payment_status: string
+          person_count: number | null
+          points_earned: number
+          room_name: string | null
+          status: string
+          total_cost: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          area_cost?: number
+          booking_type?: string
+          created_at?: string
+          deposit_amount?: number
+          deposit_paid?: boolean
+          details?: string
+          id?: string
+          orders_cost?: number
+          payment_method?: string
+          payment_status?: string
+          person_count?: number | null
+          points_earned?: number
+          room_name?: string | null
+          status?: string
+          total_cost?: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          area_cost?: number
+          booking_type?: string
+          created_at?: string
+          deposit_amount?: number
+          deposit_paid?: boolean
+          details?: string
+          id?: string
+          orders_cost?: number
+          payment_method?: string
+          payment_status?: string
+          person_count?: number | null
+          points_earned?: number
+          room_name?: string | null
+          status?: string
+          total_cost?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gallery: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          title?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      loyalty_settings: {
+        Row: {
+          amount_for_points: number
+          daily_code: string
+          id: string
+          min_redeem_points: number
+          point_value: number
+          points_per_amount: number
+          public_area_price_per_hour: number
+          updated_at: string
+          vodafone_cash_number: string
+        }
+        Insert: {
+          amount_for_points?: number
+          daily_code?: string
+          id?: string
+          min_redeem_points?: number
+          point_value?: number
+          points_per_amount?: number
+          public_area_price_per_hour?: number
+          updated_at?: string
+          vodafone_cash_number?: string
+        }
+        Update: {
+          amount_for_points?: number
+          daily_code?: string
+          id?: string
+          min_redeem_points?: number
+          point_value?: number
+          points_per_amount?: number
+          public_area_price_per_hour?: number
+          updated_at?: string
+          vodafone_cash_number?: string
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          points: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name: string
+          phone: string
+          points?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          points?: number
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          available: boolean
+          capacity: number
+          created_at: string
+          deposit_amount: number
+          id: string
+          image_url: string | null
+          name: string
+          price_per_hour: number
+        }
+        Insert: {
+          available?: boolean
+          capacity?: number
+          created_at?: string
+          deposit_amount?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          price_per_hour?: number
+        }
+        Update: {
+          available?: boolean
+          capacity?: number
+          created_at?: string
+          deposit_amount?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          price_per_hour?: number
+        }
+        Relationships: []
+      }
+      staff_permissions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          permissions: Json
+          role_label: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          permissions?: Json
+          role_label?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          permissions?: Json
+          role_label?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +451,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import FloatingToolbar from "@/components/FloatingToolbar";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -24,6 +25,7 @@ import AdminRooms from "./pages/admin/AdminRooms";
 import AdminMenuItems from "./pages/admin/AdminMenuItems";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminGallery from "./pages/admin/AdminGallery";
 
 const queryClient = new QueryClient();
 
@@ -31,36 +33,39 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <LanguageProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <FloatingToolbar />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/public-areas" element={<PublicAreas />} />
-              <Route path="/private-rooms" element={<PrivateRooms />} />
-              <Route path="/session" element={<ActiveSession />} />
-              <Route path="/menu" element={<Menu />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/bookings" element={<Profile />} />
-              <Route path="/checkout" element={<Checkout />} />
-              {/* Admin Routes */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="bookings" element={<AdminBookings />} />
-                <Route path="rooms" element={<AdminRooms />} />
-                <Route path="menu" element={<AdminMenuItems />} />
-                <Route path="customers" element={<AdminCustomers />} />
-                <Route path="staff" element={<AdminStaff />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <FloatingToolbar />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/public-areas" element={<PublicAreas />} />
+                <Route path="/private-rooms" element={<PrivateRooms />} />
+                <Route path="/session" element={<ActiveSession />} />
+                <Route path="/menu" element={<Menu />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/bookings" element={<Profile />} />
+                <Route path="/checkout" element={<Checkout />} />
+                {/* Admin Routes */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="bookings" element={<AdminBookings />} />
+                  <Route path="rooms" element={<AdminRooms />} />
+                  <Route path="menu" element={<AdminMenuItems />} />
+                  <Route path="customers" element={<AdminCustomers />} />
+                  <Route path="staff" element={<AdminStaff />} />
+                  <Route path="gallery" element={<AdminGallery />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
   </QueryClientProvider>

@@ -1,68 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2, Save, X, UtensilsCrossed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface MenuItem {
-  id: number;
-  name: string;
-  price: number;
-  category: string;
-  description: string;
-}
-
-const MENU_KEY = "moroug_admin_menu";
-const defaultItems: MenuItem[] = [
-  { id: 1, name: "قهوة أمريكانو", price: 35, category: "مشروبات ساخنة", description: "قهوة محمصة طازجة" },
-  { id: 2, name: "لاتيه", price: 45, category: "مشروبات ساخنة", description: "إسبريسو مع حليب مخفوق" },
-  { id: 3, name: "شاي أخضر", price: 25, category: "مشروبات ساخنة", description: "شاي أخضر مع نعناع" },
-  { id: 4, name: "آيس موكا", price: 55, category: "مشروبات باردة", description: "موكا مثلجة بالشوكولاتة" },
-  { id: 5, name: "عصير مانجو", price: 40, category: "مشروبات باردة", description: "عصير مانجو طبيعي" },
-  { id: 6, name: "برجر كلاسيك", price: 85, category: "وجبات رئيسية", description: "لحم بقري مع جبنة شيدر" },
-  { id: 7, name: "كلوب ساندويتش", price: 75, category: "وجبات رئيسية", description: "دجاج مشوي مع خضروات" },
-  { id: 8, name: "كرواسون شوكولاتة", price: 30, category: "وجبات خفيفة", description: "كرواسون طازج محشو" },
-  { id: 9, name: "كيك ريد فيلفيت", price: 45, category: "وجبات خفيفة", description: "كيك طبقات فاخر" },
-];
+import { supabase } from "@/integrations/supabase/client";
 
 const categories = ["مشروبات ساخنة", "مشروبات باردة", "وجبات رئيسية", "وجبات خفيفة"];
 
-const getStoredMenu = (): MenuItem[] => {
-  const stored = localStorage.getItem(MENU_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(MENU_KEY, JSON.stringify(defaultItems));
-  return defaultItems;
-};
-
 const AdminMenuItems = () => {
-  const [items, setItems] = useState<MenuItem[]>(getStoredMenu);
-  const [editing, setEditing] = useState<number | null>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", price: 0, category: categories[0], description: "" });
   const { toast } = useToast();
 
-  const saveItems = (updated: MenuItem[]) => {
-    setItems(updated);
-    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+  const fetchItems = async () => {
+    const { data } = await supabase.from("menu_items").select("*").order("created_at");
+    setItems(data || []);
   };
 
-  const handleAdd = () => {
-    saveItems([...items, { id: Date.now(), ...form }]);
+  useEffect(() => { fetchItems(); }, []);
+
+  const handleAdd = async () => {
+    await supabase.from("menu_items").insert(form);
     setAdding(false);
     setForm({ name: "", price: 0, category: categories[0], description: "" });
     toast({ title: "تم إضافة الصنف ✅" });
+    fetchItems();
   };
 
-  const handleDelete = (id: number) => {
-    saveItems(items.filter(i => i.id !== id));
+  const handleDelete = async (id: string) => {
+    await supabase.from("menu_items").delete().eq("id", id);
     toast({ title: "تم حذف الصنف" });
+    fetchItems();
   };
 
-  const handleEditSave = (item: MenuItem) => {
-    saveItems(items.map(i => i.id === item.id ? item : i));
+  const handleEditSave = async (item: any) => {
+    await supabase.from("menu_items").update({ name: item.name, price: item.price, description: item.description, category: item.category }).eq("id", item.id);
     setEditing(null);
     toast({ title: "تم تحديث الصنف ✅" });
+    fetchItems();
   };
 
   return (
@@ -95,7 +73,7 @@ const AdminMenuItems = () => {
       )}
 
       {categories.map(cat => {
-        const catItems = items.filter(i => i.category === cat);
+        const catItems = items.filter((i: any) => i.category === cat);
         if (catItems.length === 0) return null;
         return (
           <div key={cat}>
@@ -103,7 +81,7 @@ const AdminMenuItems = () => {
               <UtensilsCrossed className="w-4 h-4 text-accent" /> {cat}
             </h3>
             <div className="space-y-2">
-              {catItems.map(item => (
+              {catItems.map((item: any) => (
                 <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="bg-card rounded-xl p-4 border border-border flex items-center justify-between">
                   {editing === item.id ? (
@@ -131,7 +109,7 @@ const AdminMenuItems = () => {
   );
 };
 
-const EditItemForm = ({ item, onSave, onCancel }: { item: MenuItem; onSave: (i: MenuItem) => void; onCancel: () => void }) => {
+const EditItemForm = ({ item, onSave, onCancel }: { item: any; onSave: (i: any) => void; onCancel: () => void }) => {
   const [form, setForm] = useState(item);
   return (
     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 items-center">

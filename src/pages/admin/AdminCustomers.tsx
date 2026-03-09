@@ -2,43 +2,34 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Users, Star, History, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { getBookings } from "@/lib/bookingStore";
-
-interface Customer {
-  name: string;
-  phone: string;
-  points: number;
-  bookingsCount: number;
-  totalSpent: number;
-}
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminCustomers = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    // Gather customer data from localStorage
-    const allKeys = Object.keys(localStorage);
-    const customerList: Customer[] = [];
-    
-    // Get the main user
-    const userStr = localStorage.getItem("moroug_user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      const bookings = getBookings();
-      const completed = bookings.filter(b => b.status === "completed");
-      customerList.push({
-        name: user.name,
-        phone: user.phone,
-        points: user.points || 0,
-        bookingsCount: completed.length,
-        totalSpent: completed.reduce((sum, b) => sum + b.totalCost, 0),
-      });
-    }
-    setCustomers(customerList);
+    const fetchCustomers = async () => {
+      // Get all profiles
+      const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+      if (!profiles) return;
+
+      // Get booking counts and totals per user
+      const enriched = await Promise.all(profiles.map(async (p: any) => {
+        const { data: bookings } = await supabase.from("bookings").select("total_cost, status")
+          .eq("user_id", p.id).eq("status", "completed");
+        return {
+          ...p,
+          bookingsCount: bookings?.length || 0,
+          totalSpent: bookings?.reduce((sum: number, b: any) => sum + Number(b.total_cost), 0) || 0,
+        };
+      }));
+      setCustomers(enriched);
+    };
+    fetchCustomers();
   }, []);
 
-  const filtered = customers.filter(c =>
+  const filtered = customers.filter((c: any) =>
     c.name.includes(search) || c.phone.includes(search)
   );
 
@@ -62,8 +53,8 @@ const AdminCustomers = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((customer, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          {filtered.map((customer: any, i: number) => (
+            <motion.div key={customer.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
               className="bg-card rounded-xl p-5 border border-border">
               <div className="flex items-center justify-between mb-3">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,38 +6,74 @@ import { Input } from "@/components/ui/input";
 import { ArrowRight, Users, Calculator, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { createPublicAreaBooking, getActiveBooking } from "@/lib/bookingStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const PRICE_PER_PERSON = 35;
 
 const PublicAreas = () => {
   const [count, setCount] = useState(1);
   const [booked, setBooked] = useState(false);
-  const [ticketId, setTicketId] = useState("");
+  const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { user, codeVerified } = useAuth();
   const total = count * PRICE_PER_PERSON;
 
-  // Check if there's already an active public booking today
-  const activeBooking = getActiveBooking();
-  const hasActiveTodayBooking = activeBooking && activeBooking.type === "public" &&
-    new Date(activeBooking.date).toDateString() === new Date().toDateString();
+  useEffect(() => {
+    if (!codeVerified) {
+      navigate("/home");
+      return;
+    }
+  }, [codeVerified, navigate]);
 
-  const handleBook = () => {
-    if (hasActiveTodayBooking) {
-      // Already booked today, just go to menu
+  useEffect(() => {
+    if (!user) return;
+    // Check for active public booking today
+    const today = new Date().toISOString().split("T")[0];
+    supabase
+      .from("bookings")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("type", "public")
+      .eq("status", "active")
+      .gte("created_at", today)
+      .limit(1)
+      .then(({ data }) => {
+        if (data && data.length > 0) setActiveBooking(data[0]);
+        setLoading(false);
+      });
+  }, [user]);
+
+  const handleBook = async () => {
+    if (activeBooking) {
       navigate("/menu");
       return;
     }
-    const booking = createPublicAreaBooking(count, PRICE_PER_PERSON);
-    setTicketId(booking.id);
+    if (!user) return;
+    const areaCost = count * PRICE_PER_PERSON;
+    const { data, error } = await supabase.from("bookings").insert({
+      user_id: user.id,
+      type: "public",
+      details: `${count} فرد - مساحة عامة`,
+      area_cost: areaCost,
+      total_cost: areaCost,
+      person_count: count,
+      status: "active",
+    }).select().single();
+
+    if (error) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+      return;
+    }
+    setActiveBooking(data);
     setBooked(true);
-    toast({
-      title: `${t("public.success")} ✅`,
-      description: `${t("public.ticket")}: ${booking.id}`,
-    });
+    toast({ title: `${t("public.success")} ✅` });
   };
+
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,13 +94,12 @@ const PublicAreas = () => {
       </div>
 
       <div className="px-6 -mt-4">
-        {hasActiveTodayBooking ? (
+        {activeBooking ? (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
             className="bg-card rounded-2xl p-8 border border-border shadow-lg text-center">
             <CheckCircle className="w-16 h-16 text-accent mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-card-foreground font-cairo mb-2">لديك حجز نشط اليوم</h2>
-            <p className="text-muted-foreground font-cairo mb-1">{t("public.ticket")}: {activeBooking!.id}</p>
-            <p className="text-muted-foreground font-cairo mb-2">الإجمالي الحالي: {activeBooking!.totalCost} ج.م</p>
+            <p className="text-muted-foreground font-cairo mb-2">الإجمالي الحالي: {activeBooking.total_cost} ج.م</p>
             <div className="space-y-3 mt-4">
               <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/menu")}>
                 {t("public.order_now")} ☕
@@ -105,7 +140,6 @@ const PublicAreas = () => {
             className="bg-card rounded-2xl p-8 border border-border shadow-lg text-center">
             <CheckCircle className="w-16 h-16 text-accent mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-card-foreground font-cairo mb-2">{t("public.success")}</h2>
-            <p className="text-muted-foreground font-cairo mb-1">{t("public.ticket")}: {ticketId}</p>
             <p className="text-muted-foreground font-cairo mb-6">
               {count} {count > 1 ? "أفراد" : "فرد"} - {total} {t("public.currency")}
             </p>

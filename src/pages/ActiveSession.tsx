@@ -5,23 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Clock, Coffee, StopCircle, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { getActiveBooking, setActiveBooking, completeActiveBooking } from "@/lib/bookingStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const ActiveSession = () => {
   const [seconds, setSeconds] = useState(0);
   const [ended, setEnded] = useState(false);
-  const [finalBooking, setFinalBooking] = useState<any>(null);
+  const [pointsEarned, setPointsEarned] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(0);
+  const [ordersCost, setOrdersCost] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { user, refreshProfile } = useAuth();
   const room = (location.state as any)?.room;
+  const bookingId = (location.state as any)?.bookingId;
 
-  const pricePerHour = room?.pricePerHour || 90;
+  const pricePerHour = room?.price_per_hour || 90;
   const currentCost = Math.ceil((seconds / 3600) * pricePerHour);
-
-  const activeBooking = getActiveBooking();
-  const ordersCost = activeBooking?.ordersCost || 0;
   const grandTotal = currentCost + ordersCost;
 
   useEffect(() => {
@@ -30,6 +32,16 @@ const ActiveSession = () => {
     return () => clearInterval(interval);
   }, [ended]);
 
+  // Fetch current orders cost
+  useEffect(() => {
+    if (!bookingId) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase.from("bookings").select("orders_cost").eq("id", bookingId).single();
+      if (data) setOrdersCost(Number(data.orders_cost) || 0);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [bookingId]);
+
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600).toString().padStart(2, "0");
     const m = Math.floor((s % 3600) / 60).toString().padStart(2, "0");
@@ -37,20 +49,34 @@ const ActiveSession = () => {
     return `${h}:${m}:${sec}`;
   };
 
-  const handleEnd = () => {
+  const handleEnd = async () => {
     setEnded(true);
-    // Update active booking with room cost
-    if (activeBooking) {
-      activeBooking.areaCost = currentCost;
-      activeBooking.totalCost = currentCost + activeBooking.ordersCost;
-      activeBooking.durationSeconds = seconds;
-      setActiveBooking(activeBooking);
-      const completed = completeActiveBooking();
-      setFinalBooking(completed);
-      toast({ title: t("session.end"), description: `الإجمالي: ${completed?.totalCost} ج.م` });
-    } else {
-      toast({ title: t("session.end"), description: `التكلفة: ${currentCost} ج.م` });
-    }
+    if (!bookingId || !user) return;
+
+    const total = currentCost + ordersCost;
+
+    // Get loyalty settings
+    const { data: settingsData } = await supabase.from("loyalty_settings").select("*").limit(1).single();
+    const settings = settingsData || { points_per_amount: 10, amount_for_points: 100 };
+    const earned = Math.floor(total / Number(settings.amount_for_points)) * Number(settings.points_per_amount);
+
+    // Update booking
+    await supabase.from("bookings").update({
+      area_cost: currentCost,
+      total_cost: total,
+      status: "completed",
+      points_earned: earned,
+    }).eq("id", bookingId);
+
+    // Update user points
+    const { data: profileData } = await supabase.from("profiles").select("points").eq("id", user.id).single();
+    const newPoints = (profileData?.points || 0) + earned;
+    await supabase.from("profiles").update({ points: newPoints }).eq("id", user.id);
+
+    setPointsEarned(earned);
+    setFinalTotal(total);
+    await refreshProfile();
+    toast({ title: t("session.end"), description: `الإجمالي: ${total} ج.م` });
   };
 
   return (
@@ -76,7 +102,6 @@ const ActiveSession = () => {
             {formatTime(seconds)}
           </p>
 
-          {/* Cost breakdown */}
           <div className="bg-muted rounded-xl p-4 mb-4 space-y-2">
             <div className="flex justify-between text-sm font-cairo">
               <span className="text-muted-foreground">تكلفة الغرفة</span>
@@ -105,15 +130,13 @@ const ActiveSession = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {finalBooking && (
-                <div className="bg-emerald/10 border border-emerald/20 rounded-xl p-4 space-y-2">
-                  <p className="text-emerald font-bold font-cairo">🎉 ربحت {finalBooking.pointsEarned} نقطة ولاء!</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <Receipt className="w-4 h-4 text-emerald" />
-                    <span className="text-sm font-cairo text-emerald">الفاتورة النهائية: {finalBooking.totalCost} ج.م</span>
-                  </div>
+              <div className="bg-emerald/10 border border-emerald/20 rounded-xl p-4 space-y-2">
+                <p className="text-emerald font-bold font-cairo">🎉 ربحت {pointsEarned} نقطة ولاء!</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Receipt className="w-4 h-4 text-emerald" />
+                  <span className="text-sm font-cairo text-emerald">الفاتورة النهائية: {finalTotal} ج.م</span>
                 </div>
-              )}
+              </div>
               <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/home")}>
                 العودة للرئيسية
               </Button>

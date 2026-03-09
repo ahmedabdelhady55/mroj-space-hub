@@ -1,11 +1,22 @@
-import { Sun, Moon, Globe } from "lucide-react";
+import { Sun, Moon, Globe, LogOut } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const FloatingToolbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang } = useLanguage();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/admin/login");
+  };
 
   return (
     <div className="fixed top-4 left-4 z-50 flex gap-2">
@@ -27,6 +38,17 @@ const FloatingToolbar = () => {
       >
         {lang === "ar" ? "EN" : "ع"}
       </Button>
+      {isAdminPage && user && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleLogout}
+          className="bg-destructive/10 backdrop-blur-md border-destructive/30 shadow-lg hover:shadow-xl hover:bg-destructive/20 transition-all text-destructive"
+          title="تسجيل الخروج"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };
